@@ -1,0 +1,51 @@
+## Visual Studio build outputs
+**/[Dd]ebug/
+**/[Rr]elease/
+**/x64/
+**/x86/
+**/[Bb]in/
+**/[Oo]bj/
+**/[Ww][Ii][Nn]32/
+**/[Aa][Rr][Mm]*/
+**/bld/
+**/DIP/
+*.exe
+*.obj
+*.pdb
+*.ilk
+*.dll
+*.lib
+*.exp
+*.tlog
+*.lastbuildstate
+*.ipdb
+*.iobj
+
+## Visual Studio user files
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+## VS Code
+.vscode/
+*.code-workspace
+
+## Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+**.inference/
+
+## Temp / debug files
+*.tmp
+*.ncb
+*.pgm
+*.gch
+Thumbs.db
+debug_ocr*.py
+/metal_ocr.py
+/test_input.bmp
+/DIP_proc/lot_number_01.bmp
