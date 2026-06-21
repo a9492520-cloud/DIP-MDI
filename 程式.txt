@@ -1,0 +1,119 @@
+#include <iostream>
+#include <vector>
+#include <string>
+#include <opencv2/opencv.hpp>
+
+// 模擬 Python 的 show 函式
+void show(const cv::Mat& img, const std::string& title) {
+    cv::imshow(title, img);
+    cv::waitKey(0);           // 等待使用者按下任意鍵，模擬 plt.show() 的阻擋效果
+    cv::destroyWindow(title); // 關閉視窗，避免螢幕疊滿視窗
+}
+
+int main() {
+    std::vector<cv::Mat> images;
+
+    // 1. 讀取影像
+    for (int i = 1; i <= 3; ++i) {
+        std::string path = "datasets/fin/fin" + std::to_string(i) + ".png";
+        cv::Mat img = cv::imread(path, cv::IMREAD_GRAYSCALE);
+
+        if (img.empty()) {
+            std::cerr << path << " 讀取失敗，請確認檔案路徑" << std::endl;
+            return -1;
+        }
+        images.push_back(img);
+    }
+
+    // 取得第一張圖的尺寸
+    int height = images[0].rows;
+    int width = images[0].cols;
+    std::cout << "Width: " << width << " Height: " << height << std::endl;
+
+    // 2. 影像處理迴圈
+    for (size_t i = 0; i < images.size(); ++i) {
+        cv::Mat fin = images[i];
+        cv::Mat original = fin.clone(); // 等效於 Python 的 .copy()
+
+        show(original, std::to_string(i + 1) + ". Original Image");
+
+        // Otsu 二值化
+        cv::Mat background;
+        double used_threshold = cv::threshold(
+            fin,
+            background,
+            0,
+            255,
+            cv::THRESH_BINARY | cv::THRESH_OTSU // C++ 中多個 Flag 組合使用位元或 '|'
+        );
+
+        std::cout << i + 1 << ". Used Threshold = " << used_threshold << std::endl;
+        show(background, std::to_string(i + 1) + ". Background Threshold");
+
+        // 形態學閉運算 (Closing)
+        int radius = 120;
+        int kernel_size = 2 * radius + 1;
+
+        cv::Mat kernel = cv::getStructuringElement(
+            cv::MORPH_ELLIPSE,
+            cv::Size(kernel_size, kernel_size)
+        );
+
+        cv::Mat closed_background;
+        cv::morphologyEx(
+            background,
+            closed_background,
+            cv::MORPH_CLOSE,
+            kernel
+        );
+
+        show(closed_background, std::to_string(i + 1) + ". Closing Result radius=" + std::to_string(radius));
+
+        // 影像相減找出瑕疵區域
+        cv::Mat defect;
+        cv::subtract(closed_background, background, defect);
+
+        show(defect, std::to_string(i + 1) + ". Difference / Defect Region");
+
+        // 尋找輪廓
+        std::vector<std::vector<cv::Point>> contours;
+        cv::findContours(
+            defect,
+            contours,
+            cv::RETR_EXTERNAL,
+            cv::CHAIN_APPROX_SIMPLE
+        );
+
+        std::vector<std::vector<cv::Point>> filtered_contours;
+
+        // 篩選輪廓
+        for (const auto& cnt : contours) {
+            double area = cv::contourArea(cnt);
+            cv::Rect rect = cv::boundingRect(cnt);
+
+            double aspect_ratio = (rect.width > 0) ? static_cast<double>(rect.height) / rect.width : 0.0;
+
+            if (area >= 20 && area <= 2000 && aspect_ratio >= 1.2 && rect.height >= 8) {
+                filtered_contours.push_back(cnt);
+            }
+        }
+
+        std::cout << i + 1 << ". Defects = " << filtered_contours.size() << std::endl;
+
+        // 繪製結果
+        cv::Mat result;
+        cv::cvtColor(original, result, cv::COLOR_GRAY2BGR);
+
+        cv::drawContours(
+            result,
+            filtered_contours,
+            -1,
+            cv::Scalar(0, 0, 255), // OpenCV C++ 預設為 BGR，(0, 0, 255) 即為純紅色
+            2
+        );
+
+        show(result, std::to_string(i + 1) + ". Final Result on Original Image");
+    }
+
+    return 0;
+}
